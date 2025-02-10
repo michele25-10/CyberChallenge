@@ -1,5 +1,6 @@
 import time
 import csv
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -17,7 +18,7 @@ def get_text_or_none(by, value):
 
 #lista con tutti i dati delle associazioni
 associations = []
-comune = "Modena"
+comune = "Finale Emilia"
 
 # Apri il browser abilitando impostazione che non rilevi i bot
 chrome_options = webdriver.ChromeOptions()
@@ -46,6 +47,7 @@ WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "dnn_ctr4
 
 n_rows = int(driver.find_element(By.ID, "dnn_ctr446_View_spnLabelNumeroTotaleItems").text)  
 n_pages = int((driver.find_element(By.ID, "dnn_ctr446_View_spnLabelNumeroPaginaTop").text).split(" ")[3]) #Pagina 1 di 55
+print(f"{datetime.now()} --- INIZIO procedura per comune: {comune} ")
 print(f"Numero di righe da copiare: {n_rows}")
 print(f"Numero di pagine da navigare: {n_pages}")
 
@@ -83,8 +85,11 @@ for k in range(0, n_pages):
         tmp["n_volontari_enti_aderenti"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnEntiAderenti")
         tmp["compagine_sociale"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnSociPersonaFisica")
         
-        #Div degli organi di amminstrazione
+       #Div degli organi di amminstrazione
         organi_amministrazione = driver.find_elements(By.ID, "dnn_ctr448_View_divOrganiAffiliazioneProcedure")
+        tmp["data_nomina_organo"] = None
+        tmp["tipo_organo"] = None
+        tmp["numero_componenti_organo"] = None
         if organi_amministrazione:  # Controlla se la lista non è vuota
             spans = organi_amministrazione[0].find_elements(By.TAG_NAME, "span")
             if len(spans) >= 7:  # Assicura che ci siano abbastanza elementi nella lista
@@ -95,21 +100,26 @@ for k in range(0, n_pages):
         #Non ho trovato un id univoco o classe univoca per riuscire a prendere i dati, la soluzione è la seguente.
         persona1_div = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//span[text()='Persona 1']/ancestor::div")))
         spans = persona1_div.find_elements(By.TAG_NAME, "span")
-        for i in range(0, len(spans)):
-            if spans[i].text == "Persona 1":
-                tmp["codice_fiscale_rappresentante_legale"] = spans[i + 6].text
-                tmp["nome_rappresentante_legale"] = spans[i + 8].text 
-                tmp["cognome_rappresentante_legale"] = spans[i + 10].text
-                break
-        
+        try:
+            index = next(i for i, span in enumerate(spans) if span.text == "Persona 1")
+            tmp["codice_fiscale_rappresentante_legale"] = spans[index + 6].text
+            tmp["nome_rappresentante_legale"] = spans[index + 8].text
+            tmp["cognome_rappresentante_legale"] = spans[index + 10].text
+        except StopIteration:
+            # Se "Persona 1" non è presente, assegna valori vuoti o gestisci l'errore
+            tmp["codice_fiscale_rappresentante_legale"] = ""
+            tmp["nome_rappresentante_legale"] = ""
+            tmp["cognome_rappresentante_legale"] = ""
         del spans
-        associations.append(tmp)    
+        associations.append(tmp)   
         
         time.sleep(1)
         driver.back()
 
     #Click del bottone successivo
     if k != (n_pages - 1):
+        driver.execute_script(f"window.scrollTo(0, 850);")
+        time.sleep(1)
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "dnn_ctr446_View_ltlProssimaPaginaBottom"))).click()
         driver.execute_script(f"window.scrollTo(0, 700);")
         time.sleep(1.5)
@@ -118,7 +128,7 @@ for k in range(0, n_pages):
 driver.quit()
         
 #Salvataggio dati nel file csv
-filename = f"associazioni_{comune}.csv"
+filename = f"{comune}.csv"
 with open(filename, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.DictWriter(file, fieldnames=associations[0].keys())  
     
@@ -129,3 +139,4 @@ with open(filename, mode="w", newline="", encoding="utf-8") as file:
     writer.writerows(associations)
     
 print(f"File CSV '{filename}' salvato correttamente!")
+print(f"{datetime.now()} --- FINE procedura per comune: {comune} ")
