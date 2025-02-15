@@ -118,6 +118,7 @@ for comune in comuni:
             tmp["name_association"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnDenominazione")
             tmp["codice_fiscale"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnCodiceFiscale")
             tmp["sezione"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnSezione")
+            tmp["atto_costitutivo"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnAttoCostitutivo")
             tmp["forma_giuridica"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnFormaGiuridica")
             tmp["email_pec"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnEmailPEC") 
             tmp["provincia"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnProvinciaSL")
@@ -132,6 +133,7 @@ for comune in comuni:
             tmp["n_volontari"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnVolontari")
             tmp["n_volontari_enti_aderenti"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnEntiAderenti")
             tmp["compagine_sociale"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnSociPersonaFisica")
+            tmp["cinque_per_mille"] = get_text_or_none(By.ID, "dnn_ctr448_View_spnCinquePerMille")
             
             #Div degli organi di amminstrazione
             organi_amministrazione = driver.find_elements(By.ID, "dnn_ctr448_View_divOrganiAffiliazioneProcedure")
