@@ -13,9 +13,10 @@ for pkt in cap:
                 token = pkt.http.authorization.replace("Bearer ", "")
                 decode_token = jwt.decode(token, options={"verify_signature": False})
                 exp_timestamp = decode_token.get("exp", None)
-
+                nbf_timestamp = decode_token.get("nbf", None)
+                
                 #Verifico se questo token è quello valido
-                if int(exp_timestamp) == int(1654080761): 
+                if  int(1654080761) > nbf_timestamp and int(1654080761) < exp_timestamp: 
                     flag = decode_token.get("flag", None)
                     print(f"Token trovato: {token}")
                     print(f"La flag di questo esercizio è: {flag}")
