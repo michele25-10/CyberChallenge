@@ -1,125 +1,126 @@
-# Software 0
+# Software 1
 
-Quando scriviamo un programma scriviamo il codice sorgente, quando lo compiliamo eseguiamo i seguenti passaggi, (noi facciamo riferimento al compilatore gcc):
+Una vulnerabilità è una debolezza che può essere sfruttata da un aggressore per eseguire azioni non autorizzate all'interno del programma.
+Per sfruttare una vulnerabilità, un aggressore si affida a strumenti e tecniche correlate a una debolezza del software.
+In questo contesto, la vulnerabilità è anche nota come superficie di attacco.
 
-- preprocessing: sostituzione delle MACRO con il testo associatio
-- compilazione: traduzione del codice in istruzioni assembly
-- assembly: dal codice assembly viene tradotto in codice oggetto (hello.o)
-- linking:
-  - Statici: Tutta la libreria la importo nel file binario generato alla fine della compilazione.
-  - Dinamici: quando dovrai chiamare la printf ci penserà il SO a farti avere il codice della printf.
+Le vulnerabilità sono più generali dei bug. Secondo la terminologia IEEE1:
 
-Come è fatto questo formato di file ELF, per i file oggetto (noi ci concentriamo sui file eseguibili).
-Questo ELF si può schematizzare nel seguente modo:
+- Bug: un errore o un guasto che causa un guasto
+- Error: un'azione umana che produce un risultato errato
+- Fault: una definizione errata di un passaggio, processo o dato in un programma per computer
+- Failure: l'incapacità del software di eseguire le funzioni richieste entro i requisiti prestazionali specificati
 
-- ELF header: descrive il contenuto del file
-- Program header table: fornisce informazioni su come creare una immagine di un processo
-- Sections: Contiene cosa è necessario per il linking
-- Section header table: descrizione della precedente sections
+La maggior parte delle vulnerabilità sono conseguenze di errori o scelte sbagliate nello
+sviluppo del software. La prima (e principale) contromisura per evitare le vulnerabilità del software è sviluppare un buon software.
 
-Come sono fatte le ELF sections e cosa contengono:
+Best Practice:
+
+1. Più semplice è, meglio è... mantieni semplice il tuo codice!
+2. Non è tutto oro ciò che luccica... tieni traccia delle ipotesi fatte in fase di progettazione e verificale a runtime
+3. Il male viene sempre dai dettagli... testa sempre il tuo codice!
+4. Se pensi che l'istruzione sia costosa, prova l'ignoranza... dedica del tempo a imparare e a studiare la soluzione e la tecnologia giusta per il tuo software
+
+## Vulnerabilità
+
+### Information leakage
+
+Le informazioni vengono divulgate involontariamente all'utente finale e utilizzate dagli aggressori per violare la sicurezza dell'applicazione.
+
+Un esempio è una password in hardcodata e non hashata all'interno del codice.
+
+### Buffer Overflow
+
+Le operazioni di scrittura sui dati possono superare i limiti del buffer e sovrascrivere le posizioni di memoria adiacenti.
+Questo può causare:
+
+- esecuzione di codice dannoso
+- escalation dei privilegi
+
+### Race condition
+
+La piccola finestra temporale tra l'applicazione di un controllo di sicurezza e l'utilizzo dei servizi in un sistema consente di modificare il comportamento del programma.
+È il risultato di interferenze tra più thread in esecuzione nel sistema e che condividono le stesse risorse.
+
+Esempio classico:
+
+1. Il programma controlla se un utente ha i permessi per accedere/modificare un file.
+2. Poco dopo, usa effettivamente quel file.
+
+Se un attaccante riesce a modificare il file (o un collegamento simbolico, o un valore condiviso) tra il controllo e l’uso, può aggirare il controllo di sicurezza.
+
+### Invalid data processing
+
+I dati vengono elaborati con presupposti errati o parziali che consentono all'aggressore di abilitare comportamenti indesiderati o eseguire codice dannoso
+
+## Static and Dynamic Analysis
+
+### Static Analysis
+
+L'analisi statica dei programmi è l'analisi del software per computer che viene eseguita senza effettivamente eseguire i programmi, in contrasto con l'analisi dinamica, che viene eseguita sui programmi durante la loro esecuzione.
+L'analisi statica può essere eseguita su...
+
+- il codice sorgente
+- il codice oggetto
+
+In questo modulo, ci concentreremo sull'analisi statica eseguita sul codice oggetto.
+
+Questi strumenti possono essere utilizzati per raccogliere informazioni da file binari che possono essere utilizzati per scoprire vulnerabilità.
+Tools:
+
+- objdump
+- readelf
+- strings
+
+Dato un file binario, possiamo:
+
+- verificare se il file è eseguibile o meno
+- scoprire l'architettura per cui è stato compilato il binario
+- raccogliere simboli e stringhe utilizzati nel programma
+- verificare se è presente un processo in esecuzione associato al binario
+- leggere l'SHA di un file e verificare se è associato a software dannoso
+- identificare i nomi delle funzioni e le librerie utilizzate
+
+Le informazioni raccolte dai file binari possono essere utilizzate per scoprire le vulnerabilità del programma:
+
+- dove un programma riceve un input e se questo viene convalidato
+- se la memoria è gestita in modo sicuro
+- se vengono utilizzate librerie aggiornate o framework di terze parti
+- come viene compilata l'applicazione
+- se vengono utilizzate stringhe (statiche) per registrare dati sensibili
+
+### Dynamic Analysis
+
+L'analisi dinamica è una tecnica di analisi del programma eseguita su processori virtuali o reali.
+Questo tipo di analisi viene eseguita utilizzando strumenti in grado di osservare l'esecuzione del programma:
+
+- analisi della memoria dinamica
+- disassemblaggio dinamico
 
 ![alt text](image.png)
 
-L'architettura del processore x86, che contiene 8 registri ognuno della dimensione di 32 bit.
+Lo strumento **ltrace**, che consente di tracciare le chiamate alle librerie:
+
+È possibile limitare l'analisi dinamica utilizzando tecniche anti-debug. L'idea è quella di eseguire codice specifico che causa errori quando un debugger tenta di tracciare un programma. Uno degli approcci più semplici è quello basato sul self-debugging.
+
+Nel self-debugging viene creato un nuovo processo per tracciare l'esecuzione del nostro programma (come un debugger).
+Viene utilizzata la funzione ptrace. Se un debugger è in esecuzione, viene generato un errore e il programma termina.
+In C, l'auto-debug è implementato basandosi sulla funzione ptrace disponibile in sys/ptrace.h.
 
 ![alt text](image-1.png)
 
-L'architettura x64 ha la dimensione dei registri di 64 bit.
-Ma sono presenti anche altri registri molto più grandi un esempio anche fino a 512 bit.
+Possiamo comunque usare un debugger per bypassare il self-debugging. Dobbiamo solo:
+
+- Trovare dove viene invocato ptrace
+- Lasciare che il debugger salti questa invocazione
+
+Esistono tecniche di reverse engineering che possono aiutare in questo compito
+
+Dopo aver utilizzato uno strumento come Ghidra, possiamo usare gdb per chiamare una delle funzioni del programma.
+Per prima cosa, dobbiamo caricare il programma e impostare un breakpoint nel main:
 
 ![alt text](image-2.png)
 
-Alcune istruzioni assembly note del x86:
-
-- mov op1, op2: copia i due elementi da sorgente a destinazione
-- push op1: Aggiunge un elemento sulla cima dello stack
-- pop op1: Ricordati che lo stack è di tipo LIFO, rimuove dalla cima dello stack
-- lea op1, op2: load dell'indirizzo di memoria indicato da op2 nel registro specificato da op1.
-- add op1, op2
-- sub op1, op2
-- and op1, op2
-- or op1, op2
-- xor op1, op2
-- jump op: salto all'istruzione
-- j<condition> op: in base alla condizione definite fa cose
-
-Quando noi scriviamo un programma noi usiamo delle tipologie di dato precise, senza sapere come vengono rappresentate in memoria, tantomeno dove.
-In C rispetto ad altri linguaggi lavoriamo anche con i puntatori a memoria.
-Il compilatore non memorizza sempre i dati in memoria vicini tra loro, alle volte si possono ottimizzare e quindi in base a come compiliamo potrebbe essere differente l'ordine dei dati o l'aggiunta di padding.
-
-Vediamo ora cos'è un processo in memoria.
-Un processo memorizza i dati e il codice necessario per eseguire quei processi.
+Dopodiché possiamo chiamare la funzione functionOne() e scoprire il segreto:
 
 ![alt text](image-3.png)
-
-Lo stack è composto da più stackframe che contiene le informazioni per le chiamate a funzione, quando la funzione termina viene tolta.
-L'architettura dello stack dipende dal sistema operativo, dall'architettura e dal compilatore.
-
-Nelle architetture noi nel registro ESP abbiamo il puntatore all'ultimissimo elemento dello stack.
-In ogni Stack frame troviamo gli argument, il return address, il frame pointer(ci dice dove iniziano le variabili locali di questo frame) e le variabili locali.
-
-C declaration è una calling convention che viene usata in molti compilatore x86 che spiega come vengono inseriti gli argomenti sullo stack e come viene fatto il return.
-
-Un altra struttura fondamentale per la gestione dei processi è l'heap. Mentre lo stack server per la gestione delle chiamate a funzione, l'heap è una struttura che serve per allocare variabilid i tipo dinamico.
-Le variabili inserite nell'Heap hanno un tempo di vita maggiore del frame nel quale viene dichiarato. L'Heap dipende dai linguaggi di programmazione, in C viene usato quando usiamo istruzioni come malloc(int) e free(void\*)
-In python ad esempio non mi occupo della gestione della memoria, viene usato il suo garbage collector che mi libera la memoria.
-
-## Strumenti
-
-### ELF
-
-I file binari, come leggere i dati ELF:
-
-- strings: Strumento che raccoglie tutte le stringhe interne ad un file binario (prese le sequenze di almeno 4 caratteri stampabili e le mostrano a video, quest'ultime però devono terminare con caratteri speciali come '/0'). Da queste stringhe noi potremmo trovare delle password o caratteristiche simili. flag:
-  - -d, -n, -h, --help
-- objdump: Una o più informazioni su uno o più file oggetto come l'header di un object file:
-  - flag: -f, -h, -D (Disassambly), --help
-- readelf: Possiamo vedere le informazioni del nostro elf header:
-  - flag: -h, -s, --help
-
-### GDB
-
-Per scorprire di più si può usare GDB per debuggare il programma:
-
-- gdb <program>
-
-Una volta eseguito il programma con GDB possiamo eseguire dei comandi che ci permettono di fare diverse cose:
-
-![alt text](image-4.png)
-
-Quando un programma si ferma su un breakpoint è fondamentale ispezionare lo stack ed il suo stack frame, il comando è (info frame).
-
-Comando disas permette di disassemblare l'eseguibile e vedere la lista di istruzioni assembly.
-
-Comadno print per stampare: print {nome_variabile}
-
-![alt text](image-6.png)
-
-![alt text](image-7.png)
-
-### GEF
-
-Estende le capacità di GDB che rende migliore la visualizzazione dei dati di GDB e consente di fare analisi dinamiche.
-
-### pwntools
-
-Attraverso tube noi possiamo inviare ricevere e manipolare dati.
-Attraverso un eseguibile possiamo passare variabili d'ambiente, eseguirlo...
-
-Supporta anche le sessioni ssh.
-
-### Ghidra
-
-Dall'assembly cerca di ricostruire un il codice sorgente.
-Usato per il RE.
-
-## Identificare le vulnerabilità
-
-- Dove un programma richiede un input e se viene validato
-- Se la memoria è gestita in modo sicuro
-- se vengono usate librerie di terze parti
-- come viene compilata una applicazione
-- se una stringa statica che contiene dati sensibili
-
-![alt text](image-5.png)
