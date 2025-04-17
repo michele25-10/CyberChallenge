@@ -1,0 +1,9 @@
+gdb esercizio6
+info functions 
+break sleep
+run
+
+info args
+print $eax
+
+set $rdi = 1 continue
