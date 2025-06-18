@@ -7,6 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import ElementClickInterceptedException
 
 #Funzione per ottenere i dati dalla pagina che viene aperta:
 def get_text_or_none(by, value):
@@ -18,7 +19,7 @@ def get_text_or_none(by, value):
 
 #lista con tutti i dati delle associazioni
 associations = []
-comune = "Bastiglia"
+comune = "Faenza"
 
 # Apri il browser abilitando impostazione che non rilevi i bot
 chrome_options = webdriver.ChromeOptions()
@@ -59,11 +60,19 @@ for k in range(0, n_pages):
         id_button = "dnn_ctr446_View_gvEnti_btnDettaglio_" + str(i)
         
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, id_button)))
-            driver.find_element(By.ID, id_button).click()
+            WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, id_button))
+            ).click()
         except TimeoutException:
-            print(f"Bottone {id_button} non trovato. Uscita dal ciclo.")
-            break  # Esce dal ciclo se il bottone non esiste
+            print(f"Bottone {id_button} non cliccabile o non trovato. Uscita dal ciclo.")
+            break
+        except ElementClickInterceptedException:
+            print(f"Elemento {id_button} presente ma coperto. Provo a scrollare ancora o salto.")
+            #driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
+            time.sleep(1)
+            WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, id_button))
+            ).click()
         
         tmp = {}
         #Prelevto i dati dalla pagina dell'associazione
@@ -123,6 +132,7 @@ for k in range(0, n_pages):
         driver.execute_script(f"window.scrollTo(0, 850);")
         time.sleep(1)
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "dnn_ctr446_View_ltlProssimaPaginaBottom"))).click()
+        time.sleep(1)
         driver.execute_script(f"window.scrollTo(0, 700);")
         time.sleep(1.5)
     
@@ -130,7 +140,7 @@ for k in range(0, n_pages):
 driver.quit()
         
 #Salvataggio dati nel file csv
-filename = f"{comune}.csv"
+filename = f"{comune.replace(" ", "_")}.csv"
 with open(filename, mode="w", newline="", encoding="utf-8") as file:
     writer = csv.DictWriter(file, fieldnames=associations[0].keys())  
     

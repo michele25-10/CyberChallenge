@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import ElementClickInterceptedException
 
 #Funzione per ottenere i dati dalla pagina che viene aperta:
 def get_text_or_none(by, value):
@@ -18,52 +19,8 @@ def get_text_or_none(by, value):
 #lista con tutti i dati delle associazioni e comuni da cui minare i dati
 associations = []
 comuni = [
-    "Bastiglia",
-    "Bomporto",
-    "Campogalliano",
-    "Camposanto",
-    "Carpi",
-    "Castelfranco Emilia",
-    "Castelnuovo Rangone",
-    "Castelvetro di Modena",
-    "Cavezzo",
-    "Concordia sulla Secchia",
-    "Fanano",
-    "Finale Emilia",         
-    "Fiorano Modenese",
-    "Fiumalbo",
-    "Formigine",
-    "Frassinoro",
-    "Guiglia",
-    "Lama Mocogno",
-    "Maranello",
-    "Marano sul Panaro",
-    "Medolla",
-    "Mirandola",
-    "Montecreto",
-    "Montefiorino",
-    "Montese",
-    "Nonantola",
-    "Novi di Modena",
-    "Palagano",
-    "Pavullo nel Frignano",
-    "Pievepelago",
-    "Polinago",
-    "Prignano sulla Secchia",
-    "Ravarino",
-    "Riolunato",
-    "San Cesario sul Panaro",
-    "San Felice sul Panaro",
-    "San Possidonio",
-    "San Prospero",
-    "Sassuolo",
-    "Savignano sul Panaro",
-    "Serramazzoni",
-    "Sestola",
-    "Soliera",
-    "Spilamberto",
-    "Vignola",
-    "Zocca"
+    "Lugo",
+    "Ravenna",
 ]
 
 for comune in comuni:
@@ -107,11 +64,19 @@ for comune in comuni:
             id_button = "dnn_ctr446_View_gvEnti_btnDettaglio_" + str(i)
             
             try:
-                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, id_button)))
-                driver.find_element(By.ID, id_button).click()
+                WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.ID, id_button))
+                ).click()
             except TimeoutException:
-                print(f"Bottone {id_button} non trovato. Uscita dal ciclo.")
-                break  # Esce dal ciclo se il bottone non esiste
+                print(f"Bottone {id_button} non cliccabile o non trovato. Uscita dal ciclo.")
+                break
+            except ElementClickInterceptedException:
+                print(f"Elemento {id_button} presente ma coperto. Provo a scrollare ancora o salto.")
+                #driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
+                time.sleep(1)
+                WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.ID, id_button))
+                ).click()
             
             tmp = {}
             #Prelevto i dati dalla pagina dell'associazione
@@ -171,6 +136,7 @@ for comune in comuni:
             driver.execute_script(f"window.scrollTo(0, 850);")
             time.sleep(1)
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "dnn_ctr446_View_ltlProssimaPaginaBottom"))).click()
+            time.sleep(1)
             driver.execute_script(f"window.scrollTo(0, 700);")
             time.sleep(1.5)
         

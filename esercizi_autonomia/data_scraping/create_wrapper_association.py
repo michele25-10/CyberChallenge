@@ -1,53 +1,24 @@
 import csv
 
 comuni = [
-    "Bastiglia",
-    "Bomporto",
-    "Campogalliano",
-    "Camposanto",
-    "Carpi",
-    "Castelfranco Emilia",
-    "Castelnuovo Rangone",
-    "Castelvetro di Modena",
-    "Cavezzo",
-    "Concordia sulla Secchia",
-    "Fanano",
-    "Finale Emilia",         
-    "Fiorano Modenese",
-    "Fiumalbo",
-    "Formigine",
-    "Frassinoro",
-    "Guiglia",
-    "Lama Mocogno",
-    "Maranello",
-    "Marano sul Panaro",
-    "Medolla",
-    "Mirandola",
-    "Modena",
-    "Montecreto",
-    "Montefiorino",
-    "Montese",
-    "Nonantola",
-    "Novi di Modena",
-    "Palagano",
-    "Pavullo nel Frignano",
-    "Pievepelago",
-    "Polinago",
-    "Prignano sulla Secchia",
-    "Ravarino",
-    "Riolunato",
-    "San Cesario sul Panaro",
-    "San Felice sul Panaro",
-    "San Possidonio",
-    "San Prospero",
-    "Sassuolo",
-    "Savignano sul Panaro",
-    "Serramazzoni",
-    "Sestola",
-    "Soliera",
-    "Spilamberto",
-    "Vignola",
-    "Zocca"
+    "Alfonsine",
+    "Bagnacavallo",
+    "Bagnara di Romagna",
+    "Brisighella",
+    "Casola Valsenio",
+    "Castel Bolognese",
+    "Cervia",
+    "Conselice",
+    "Cotignola",
+    "Faenza",
+    "Fusignano",
+    "Lugo",
+    "Massa Lombarda",
+    "Ravenna",
+    "Riolo Terme",
+    "Russi",
+    "Sant'Agata sul Santerno",
+    "Solarolo"
 ]
 
 filename = []
@@ -55,7 +26,7 @@ for comune in comuni:
     filename.append(comune.replace(" ", "_") + ".csv")
 
 # Nome del file di output
-output_file = "associazioni_modena.csv"
+output_file = "associazioni_ravenna.csv"
 
 # Apri il file di output in modalità scrittura
 with open(output_file, mode="w", newline="", encoding="utf-8") as outfile:
