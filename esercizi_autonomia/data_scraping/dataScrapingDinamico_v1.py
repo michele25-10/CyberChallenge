@@ -17,14 +17,142 @@ def get_text_or_none(by, value):
         return None
 
 
+def extract_rappresentante_legale():
+    """Estrae i dati del rappresentante legale con gestione degli errori"""
+    try:
+        # Prima prova a trovare "Persona 1"
+        persona1_div = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, "//span[text()='Persona 1']/ancestor::div"))
+        )
+        spans = persona1_div.find_elements(By.TAG_NAME, "span")
+        
+        # Trova l'indice di "Persona 1"
+        index = next(i for i, span in enumerate(spans) if span.text.strip() == "Persona 1")
+        
+        # Estrai i dati (con controlli di sicurezza)
+        cf = spans[index + 6].text.strip() if len(spans) > index + 6 else ""
+        nome = spans[index + 8].text.strip() if len(spans) > index + 8 else ""
+        cognome = spans[index + 10].text.strip() if len(spans) > index + 10 else ""
+        
+        return cf, nome, cognome
+        
+    except TimeoutException:
+        print("Elemento 'Persona 1' non trovato - potrebbe non esserci un rappresentante legale")
+        
+        # Prova con selettori alternativi più generici
+        try:
+            # Cerca div che contengono informazioni su persone
+            person_divs = driver.find_elements(By.XPATH, "//div[contains(@class, 'person') or contains(text(), 'Codice Fiscale')]")
+            
+            if person_divs:
+                # Analizza il primo div trovato
+                spans = person_divs[0].find_elements(By.TAG_NAME, "span")
+                print(f"Trovato div alternativo con {len(spans)} span")
+                
+                # Cerca pattern comuni per codice fiscale, nome, cognome
+                cf, nome, cognome = "", "", ""
+                
+                for i, span in enumerate(spans):
+                    text = span.text.strip().upper()
+                    # Pattern per codice fiscale (16 caratteri alfanumerici)
+                    if len(text) == 16 and text.isalnum():
+                        cf = text
+                    # Pattern per nome/cognome (cerca etichette)
+                    elif text in ["NOME:", "COGNOME:"] and i + 1 < len(spans):
+                        if text == "NOME:":
+                            nome = spans[i + 1].text.strip()
+                        elif text == "COGNOME:":
+                            cognome = spans[i + 1].text.strip()
+                
+                return cf, nome, cognome
+            
+        except Exception as e:
+            print(f"Errore nella ricerca alternativa: {e}")
+        
+        return "", "", ""
+        
+    except StopIteration:
+        print("Testo 'Persona 1' non trovato negli span")
+        return "", "", ""
+        
+    except Exception as e:
+        print(f"Errore imprevisto nell'estrazione rappresentante legale: {e}")
+        return "", "", ""
+
+
+def click_button_with_retry(button_id, max_attempts=3):
+                for attempt in range(max_attempts):
+                    try:
+                        # Scroll per assicurarsi che l'elemento sia visibile
+                        element = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.ID, button_id))
+                        )
+                        #driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                        time.sleep(0.5)  # Pausa breve dopo lo scroll
+                        
+                        # Attendi che sia cliccabile e fai click
+                        WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.ID, button_id))
+                        ).click()
+                        
+                        return True  # Click riuscito
+                        
+                    except TimeoutException:
+                        print(f"Tentativo {attempt + 1}: Bottone {button_id} non trovato o non cliccabile. Uscita dal ciclo.")
+                        return False  # Elemento non trovato, esci dal ciclo principale
+                        
+                    except ElementClickInterceptedException:
+                        print(f"Tentativo {attempt + 1}: Elemento {button_id} coperto. Riprovo...")
+                        # Scroll più aggressivo
+                        #driver.execute_script("window.scrollTo(0, document.body.scrollHeight * 0.4);")
+                        time.sleep(1)
+                        # Se è l'ultimo tentativo, proviamo JavaScript click
+                        if attempt == max_attempts - 1:
+                            try:
+                                element = driver.find_element(By.ID, button_id)
+                                driver.execute_script("arguments[0].click();", element)
+                                print(f"Click JavaScript riuscito per {button_id}")
+                                return True
+                            except Exception as e:
+                                print(f"Anche il click JavaScript è fallito per {button_id}: {e}")
+                                continue  # Salta questo elemento
+                                
+                    except Exception as e:
+                        print(f"Tentativo {attempt + 1}: Errore imprevisto per {button_id}: {e}")
+                        time.sleep(1)
+                
+                print(f"Tutti i tentativi falliti per {button_id}. Salto questo elemento.")
+                return None  # Indica che dobbiamo saltare questo elemento
+            
+
+
 #lista con tutti i dati delle associazioni
 associations = []
-comune = "Faenza"
+comune = "Padova"
 
-# Apri il browser abilitando impostazione che non rilevi i bot
 chrome_options = webdriver.ChromeOptions()
+# Apri il browser abilitando impostazione che non rilevi i bot
+chrome_options.add_argument("--log-level=3") 
 chrome_options.add_experimental_option("detach", True)
 chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    
+# AGGIUNGI QUESTE OPZIONI PER STABILITÀ
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--disable-extensions")
+chrome_options.add_argument("--disable-plugins")
+chrome_options.add_argument("--disable-images")  # Velocizza il caricamento
+chrome_options.add_argument("--memory-pressure-off")
+chrome_options.add_argument("--max_old_space_size=4096")
+    
+    # Disabilita funzionalità che causano errori nei log
+chrome_options.add_argument("--disable-background-timer-throttling")
+chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+chrome_options.add_argument("--disable-renderer-backgrounding")
+chrome_options.add_argument("--disable-features=TranslateUI")
+chrome_options.add_argument("--disable-component-extensions-with-background-pages")
+    
 driver = webdriver.Chrome(options=chrome_options)
 driver.maximize_window()
 driver.get("https://servizi.lavoro.gov.it/runts/it-it/Ricerca-enti") 
@@ -59,20 +187,17 @@ for k in range(0, n_pages):
     for i in range(0, 10):
         id_button = "dnn_ctr446_View_gvEnti_btnDettaglio_" + str(i)
         
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, id_button))
-            ).click()
-        except TimeoutException:
-            print(f"Bottone {id_button} non cliccabile o non trovato. Uscita dal ciclo.")
+        # Usa la funzione con retry
+        click_result = click_button_with_retry(id_button)
+        
+        if click_result is False:
+            # Elemento non trovato, probabilmente siamo all'ultima pagina
+            print(f"Bottone {id_button} non trovato. Fine degli elementi in questa pagina.")
             break
-        except ElementClickInterceptedException:
-            print(f"Elemento {id_button} presente ma coperto. Provo a scrollare ancora o salto.")
-            #driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
-            time.sleep(1)
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, id_button))
-            ).click()
+        elif click_result is None:
+            # Elemento trovato ma non cliccabile, salta e continua con il prossimo
+            print(f"Salto l'elemento {id_button} e continuo con il prossimo.")
+            continue
         
         tmp = {}
         #Prelevto i dati dalla pagina dell'associazione
@@ -109,22 +234,20 @@ for k in range(0, n_pages):
                 tmp["numero_componenti_organo"] = spans[6].text
 
         #Non ho trovato un id univoco o classe univoca per riuscire a prendere i dati, la soluzione è la seguente.
-        persona1_div = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//span[text()='Persona 1']/ancestor::div")))
-        spans = persona1_div.find_elements(By.TAG_NAME, "span")
         try:
-            index = next(i for i, span in enumerate(spans) if span.text == "Persona 1")
-            tmp["codice_fiscale_rappresentante_legale"] = spans[index + 6].text
-            tmp["nome_rappresentante_legale"] = spans[index + 8].text
-            tmp["cognome_rappresentante_legale"] = spans[index + 10].text
-        except StopIteration:
-            # Se "Persona 1" non è presente, assegna valori vuoti o gestisci l'errore
+            cf, nome, cognome = extract_rappresentante_legale()
+            tmp["codice_fiscale_rappresentante_legale"] = cf
+            tmp["nome_rappresentante_legale"] = nome
+            tmp["cognome_rappresentante_legale"] = cognome
+                
+        except Exception as e:
+            print(f"Errore critico nell'estrazione rappresentante legale: {e}")
             tmp["codice_fiscale_rappresentante_legale"] = ""
             tmp["nome_rappresentante_legale"] = ""
             tmp["cognome_rappresentante_legale"] = ""
-        del spans
-        associations.append(tmp)   
         
-        time.sleep(1)
+        associations.append(tmp)   
+
         driver.back()
 
     #Click del bottone successivo
